@@ -25,13 +25,14 @@ let robotState = {
 };
 
 // =====================================================
-// ROBOT CONTROL FUNCTION
+// ROBOT CONTROL
 // =====================================================
 
 function setRobotDirection(direction) {
     direction = String(direction).toLowerCase().trim();
 
     if (!VALID_DIRECTIONS.includes(direction)) {
+        console.log(`[ROBOT] Invalid direction: ${direction}`);
         return false;
     }
 
@@ -46,20 +47,21 @@ function setRobotDirection(direction) {
 }
 
 // =====================================================
-// MIDDLEWARE
+// EXPRESS MIDDLEWARE
 // =====================================================
 
-// Serve frontend
+// Frontend
 app.use(express.static(path.join(__dirname, "public")));
 
-// JSON parser only for API routes
+// JSON parser ONLY for API routes
 app.use("/api", express.json());
 
-// Simple request logger
+// HTTP logger
 app.use((req, res, next) => {
     console.log(
         `[HTTP] ${new Date().toISOString()} ${req.method} ${req.originalUrl}`
     );
+
     next();
 });
 
@@ -67,7 +69,7 @@ app.use((req, res, next) => {
 // API ROUTES
 // =====================================================
 
-// Health check
+// Health
 app.get("/api/health", (req, res) => {
     res.json({
         success: true,
@@ -77,7 +79,7 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// Current robot state
+// Robot state
 app.get("/api/state", (req, res) => {
     res.json({
         success: true,
@@ -85,7 +87,7 @@ app.get("/api/state", (req, res) => {
     });
 });
 
-// POST movement command
+// POST /api/move
 app.post("/api/move", (req, res) => {
     const { direction } = req.body;
 
@@ -113,7 +115,7 @@ app.post("/api/move", (req, res) => {
     });
 });
 
-// GET movement command
+// GET /api/move/:direction
 app.get("/api/move/:direction", (req, res) => {
     const success = setRobotDirection(req.params.direction);
 
@@ -133,10 +135,9 @@ app.get("/api/move/:direction", (req, res) => {
 });
 
 // =====================================================
-// ALEXA HANDLERS
+// ALEXA - LAUNCH REQUEST
 // =====================================================
 
-// Launch
 const LaunchRequestHandler = {
 
     canHandle(handlerInput) {
@@ -150,17 +151,15 @@ const LaunchRequestHandler = {
         console.log("[ALEXA] LaunchRequest received");
 
         return handlerInput.responseBuilder
-            .speak(
-                "Robot controller is ready. You can say move forward, backward, left, right, or stop."
-            )
-            .reprompt(
-                "You can say move forward, backward, left, right, or stop."
-            )
+            .speak("Robot controller is ready.")
             .getResponse();
     }
 };
 
-// Move Forward
+// =====================================================
+// ALEXA - MOVE FORWARD
+// =====================================================
+
 const MoveForwardIntentHandler = {
 
     canHandle(handlerInput) {
@@ -186,7 +185,10 @@ const MoveForwardIntentHandler = {
     }
 };
 
-// Move Backward
+// =====================================================
+// ALEXA - MOVE BACKWARD
+// =====================================================
+
 const MoveBackwardIntentHandler = {
 
     canHandle(handlerInput) {
@@ -212,7 +214,10 @@ const MoveBackwardIntentHandler = {
     }
 };
 
-// Move Left
+// =====================================================
+// ALEXA - MOVE LEFT
+// =====================================================
+
 const MoveLeftIntentHandler = {
 
     canHandle(handlerInput) {
@@ -238,7 +243,10 @@ const MoveLeftIntentHandler = {
     }
 };
 
-// Move Right
+// =====================================================
+// ALEXA - MOVE RIGHT
+// =====================================================
+
 const MoveRightIntentHandler = {
 
     canHandle(handlerInput) {
@@ -264,7 +272,10 @@ const MoveRightIntentHandler = {
     }
 };
 
-// Stop Robot
+// =====================================================
+// ALEXA - STOP ROBOT
+// =====================================================
+
 const StopRobotIntentHandler = {
 
     canHandle(handlerInput) {
@@ -290,7 +301,10 @@ const StopRobotIntentHandler = {
     }
 };
 
-// Help
+// =====================================================
+// ALEXA - HELP
+// =====================================================
+
 const HelpIntentHandler = {
 
     canHandle(handlerInput) {
@@ -310,14 +324,14 @@ const HelpIntentHandler = {
             .speak(
                 "You can say move forward, move backward, move left, move right, or stop."
             )
-            .reprompt(
-                "What would you like the robot to do?"
-            )
             .getResponse();
     }
 };
 
-// Cancel / Stop
+// =====================================================
+// ALEXA - CANCEL / STOP
+// =====================================================
+
 const CancelAndStopIntentHandler = {
 
     canHandle(handlerInput) {
@@ -346,12 +360,15 @@ const CancelAndStopIntentHandler = {
         setRobotDirection("stop");
 
         return handlerInput.responseBuilder
-            .speak("Robot stopped. Goodbye.")
+            .speak("Robot stopped.")
             .getResponse();
     }
 };
 
-// Session Ended
+// =====================================================
+// ALEXA - SESSION ENDED
+// =====================================================
+
 const SessionEndedRequestHandler = {
 
     canHandle(handlerInput) {
@@ -371,7 +388,7 @@ const SessionEndedRequestHandler = {
 };
 
 // =====================================================
-// ERROR HANDLER
+// ALEXA ERROR HANDLER
 // =====================================================
 
 const ErrorHandler = {
@@ -382,12 +399,11 @@ const ErrorHandler = {
 
     handle(handlerInput, error) {
 
-        console.error("[ALEXA ERROR]", error);
+        console.error("[ALEXA ERROR]");
+        console.error(error);
 
         return handlerInput.responseBuilder
-            .speak(
-                "Sorry, there was a problem controlling the robot."
-            )
+            .speak("Sorry, there was a problem controlling the robot.")
             .getResponse();
     }
 };
@@ -399,7 +415,6 @@ const ErrorHandler = {
 const skill = Alexa.SkillBuilders.custom()
 
     .addRequestHandlers(
-
         LaunchRequestHandler,
 
         MoveForwardIntentHandler,
@@ -423,13 +438,12 @@ const skill = Alexa.SkillBuilders.custom()
 // EXPRESS ADAPTER
 // =====================================================
 //
-// TEMPORARY DIAGNOSTIC MODE:
+// TEMPORARY TEST MODE
 //
-// false = don't verify Alexa request signature
-// false = don't verify Alexa timestamp
+// false = disable signature verification
+// false = disable timestamp verification
 //
-// We are using this ONLY to determine whether
-// request verification is causing the Alexa failure.
+// We are using this temporarily to diagnose Alexa.
 // =====================================================
 
 const adapter = new ExpressAdapter(
@@ -444,12 +458,14 @@ const adapter = new ExpressAdapter(
 
 app.post(
     "/alexa",
+
     (req, res, next) => {
 
         console.log("[ALEXA] POST /alexa received");
 
         next();
     },
+
     adapter.getRequestHandlers()
 );
 
