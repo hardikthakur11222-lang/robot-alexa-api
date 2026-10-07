@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* =========================================================
-   ROBOT STATE
+   ROBOT
 ========================================================= */
 
 const VALID_DIRECTIONS = [
@@ -25,7 +25,9 @@ let robotState = {
 };
 
 function setRobotDirection(direction) {
-    const value = String(direction || "").trim().toLowerCase();
+    const value = String(direction || "")
+        .trim()
+        .toLowerCase();
 
     if (!VALID_DIRECTIONS.includes(value)) {
         console.log(`[ROBOT] Invalid direction: ${value}`);
@@ -43,20 +45,31 @@ function setRobotDirection(direction) {
 }
 
 /* =========================================================
-   MIDDLEWARE
+   STATIC WEBSITE
 ========================================================= */
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 app.use(express.static(path.join(__dirname, "public")));
+
+/* =========================================================
+   HTTP LOGGER
+========================================================= */
 
 app.use((req, res, next) => {
     console.log(
         `[HTTP] ${new Date().toISOString()} ${req.method} ${req.originalUrl}`
     );
+
     next();
 });
+
+/* =========================================================
+   API JSON PARSER
+   IMPORTANT:
+   Do NOT use app.use(express.json()) globally.
+   Alexa ExpressAdapter needs to parse /alexa itself.
+========================================================= */
+
+app.use("/api", express.json());
 
 /* =========================================================
    HEALTH
@@ -72,7 +85,7 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================================================
-   ROBOT STATE
+   STATE
 ========================================================= */
 
 app.get("/api/state", (req, res) => {
@@ -83,7 +96,7 @@ app.get("/api/state", (req, res) => {
 });
 
 /* =========================================================
-   ROBOT MOVE - POST
+   MOVE POST
 ========================================================= */
 
 app.post("/api/move", (req, res) => {
@@ -115,7 +128,7 @@ app.post("/api/move", (req, res) => {
 });
 
 /* =========================================================
-   ROBOT MOVE - GET
+   MOVE GET
 ========================================================= */
 
 app.get("/api/move/:direction", (req, res) => {
@@ -137,14 +150,16 @@ app.get("/api/move/:direction", (req, res) => {
 });
 
 /* =========================================================
-   ALEXA - LAUNCH
+   ALEXA LAUNCH
 ========================================================= */
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(
-            handlerInput.requestEnvelope
-        ) === "LaunchRequest";
+        return (
+            Alexa.getRequestType(
+                handlerInput.requestEnvelope
+            ) === "LaunchRequest"
+        );
     },
 
     handle(handlerInput) {
@@ -160,7 +175,7 @@ const LaunchRequestHandler = {
 };
 
 /* =========================================================
-   ALEXA - FORWARD
+   FORWARD
 ========================================================= */
 
 const MoveForwardIntentHandler = {
@@ -187,7 +202,7 @@ const MoveForwardIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - BACKWARD
+   BACKWARD
 ========================================================= */
 
 const MoveBackwardIntentHandler = {
@@ -214,7 +229,7 @@ const MoveBackwardIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - LEFT
+   LEFT
 ========================================================= */
 
 const MoveLeftIntentHandler = {
@@ -241,7 +256,7 @@ const MoveLeftIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - RIGHT
+   RIGHT
 ========================================================= */
 
 const MoveRightIntentHandler = {
@@ -268,7 +283,7 @@ const MoveRightIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - STOP
+   STOP
 ========================================================= */
 
 const StopRobotIntentHandler = {
@@ -295,7 +310,7 @@ const StopRobotIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - HELP
+   HELP
 ========================================================= */
 
 const HelpIntentHandler = {
@@ -323,7 +338,7 @@ const HelpIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - CANCEL / STOP
+   AMAZON STOP / CANCEL
 ========================================================= */
 
 const CancelAndStopIntentHandler = {
@@ -346,7 +361,7 @@ const CancelAndStopIntentHandler = {
     },
 
     handle(handlerInput) {
-        console.log("[ALEXA] Cancel/Stop");
+        console.log("[ALEXA] Stop/Cancel");
 
         setRobotDirection("stop");
 
@@ -357,7 +372,7 @@ const CancelAndStopIntentHandler = {
 };
 
 /* =========================================================
-   ALEXA - SESSION END
+   SESSION ENDED
 ========================================================= */
 
 const SessionEndedRequestHandler = {
@@ -378,7 +393,7 @@ const SessionEndedRequestHandler = {
 };
 
 /* =========================================================
-   ALEXA - ERROR HANDLER
+   ERROR HANDLER
 ========================================================= */
 
 const ErrorHandler = {
@@ -392,14 +407,14 @@ const ErrorHandler = {
 
         return handlerInput.responseBuilder
             .speak(
-                "Sorry, I had a problem controlling the robot."
+                "Sorry, there was a problem controlling the robot."
             )
             .getResponse();
     }
 };
 
 /* =========================================================
-   CREATE ALEXA SKILL
+   CREATE SKILL
 ========================================================= */
 
 const skill = Alexa.SkillBuilders.custom()
@@ -418,7 +433,7 @@ const skill = Alexa.SkillBuilders.custom()
     .create();
 
 /* =========================================================
-   ALEXA ENDPOINT
+   ALEXA EXPRESS ADAPTER
 ========================================================= */
 
 const adapter = new ExpressAdapter(
@@ -427,22 +442,26 @@ const adapter = new ExpressAdapter(
     false
 );
 
+/* =========================================================
+   ALEXA ENDPOINT
+
+   IMPORTANT:
+   No express.json() before this route.
+========================================================= */
+
 app.post(
     "/alexa",
+
     (req, res, next) => {
         console.log("[ALEXA] POST /alexa received");
-        console.log(
-            "[ALEXA] Request type:",
-            req.body?.request?.type
-        );
-
         next();
     },
+
     adapter.getRequestHandlers()
 );
 
 /* =========================================================
-   404 / FRONTEND
+   FRONTEND FALLBACK
 ========================================================= */
 
 app.use((req, res) => {
@@ -456,7 +475,7 @@ app.use((req, res) => {
 });
 
 /* =========================================================
-   ERROR HANDLER
+   SERVER ERROR HANDLER
 ========================================================= */
 
 app.use((err, req, res, next) => {
@@ -472,7 +491,7 @@ app.use((err, req, res, next) => {
 });
 
 /* =========================================================
-   START SERVER
+   START
 ========================================================= */
 
 app.listen(
